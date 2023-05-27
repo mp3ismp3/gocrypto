@@ -1,0 +1,24 @@
+system:
+  domain: mall
+  version: 1.0
+  env: "dev"
+  HttpPort: ":5001"
+  Host: "localhost"
+  UploadModel: "local"
+
+mysql:
+  default:
+      dialect: "mysql"
+      dbHost: "127.0.0.1"
+      dbPort: "3306"
+      dbName: "trade_db"
+      userName: "root"
+      password: "860203"
+      charset: "utf8mb4"
+
+redis:
+  redisDbName: 4
+  redisHost: "localhost:6379"
+  redisPort: 6379
+  redisPassword: 123456
+  redisNetwork: "tcp"

@@ -1,0 +1,63 @@
+syntax = "proto3";
+package gocrypto; //name space
+
+option go_package = "github.com/mp3ismp3/proto";
+
+message OpenMatchingRequest {
+    string symbol = 1;
+    float openPrice =2;
+}
+
+
+message CloseMatchingRequest {
+    string symbol = 1;
+}
+
+message Response {
+    int32 code=1; 
+    string message=2;
+}
+
+message CreateOrderRequest {
+    string symbol = 1;
+    float qty = 2;
+    float price = 3;
+    enum OrderType {
+        Market = 0;
+        Limit = 1;
+    }
+    enum OrderSide {
+        Buy  = 0 ;
+        Sell = 1 ;
+    }
+    OrderType orderType = 4;
+    OrderSide orderSide = 5;
+
+}
+
+message ModifyOrderRequest {
+    string orderId = 1;
+    float qty = 2;
+    float price = 3;
+}
+
+
+message CancelOrderRequest {
+    string symbol = 1;
+    string orderId = 2;
+}
+
+
+message OrderLogResponse {
+    string orderId=1;
+
+}
+
+
+service Exchange {
+    rpc OpenMatching (OpenMatchingRequest) returns (Response) {};
+    rpc CloseMatching (CloseMatchingRequest) returns (Response) {};
+    rpc CreateOrder (CreateOrderRequest) returns (OrderLogResponse) {};
+    rpc CancelOrder (CancelOrderRequest) returns (OrderLogResponse) {};
+    rpc ModifyOrder (ModifyOrderRequest) returns (OrderLogResponse) {};
+}
