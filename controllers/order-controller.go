@@ -12,13 +12,27 @@ func AddOrder(symbol string, side int32, price float32, qty float32, ordertype i
 	if side == 0 {
 		trade := engine.LimitBuy(*order)
 		fmt.Println(trade)
-		models.AddBuyOrder(*order)
 	} else {
 		trade := engine.LimitSell(*order)
 		fmt.Println(trade)
-		models.AddBuyOrder(*order)
-		// AddSellOrder(symbol string, side int32, price float32, qty float32, ordertype int32)
-
 	}
+	orderNode := order.AddOrder()
+	return orderNode.ID
+}
+
+func DeleteOrder(symbol string, OrderId uint64) uint {
+	order := models.DeleteOrder(OrderId)
+	return order.ID
+}
+
+func GetOrder(OrderId uint64) models.OrderNode {
+	order, _ := models.GetOrder(uint64(OrderId))
+	return order
+}
+
+func UpdateOrder(id uint64, price float32, qty float32) uint {
+	order := GetOrder(id)
+	order.Price = price
+	order.Quantity = qty
 	return order.ID
 }

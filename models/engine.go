@@ -1,52 +1,61 @@
 package models
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/mp3ismp3/gocrypto/db/mysql"
-	"github.com/mp3ismp3/gocrypto/db/redis"
 	"gorm.io/gorm"
 )
 
 type Engine struct {
-	ID         string
-	Symbol     string
+	ID         uint
+	Symbol     string `gorm:"unique"`
 	Price      float32
-	BuyOrders  []OrderNode `gorm:"foreignKey:OrderRefer"`
-	SellOrders []OrderNode `gorm:"foreignKey:OrderRefer"`
+	BuyOrders  []OrderNode
+	SellOrders []OrderNode
 }
 
 var (
-	DB    *gorm.DB
-	ctx   = context.Background()
-	cache = redis.NewRedisClient()
+	DB *gorm.DB
+	// ctx = context.Background()
+	// cache = redis.NewRedisClient()
 )
 
-func init() {
+func ModelInit() {
 	DB = mysql.GetDB()
-	err := DB.AutoMigrate(&OrderNode{}, &Engine{}) //順序問題
+	err := DB.AutoMigrate(&Engine{}, &OrderNode{})
 	if err != nil {
 		panic(err)
 	} //其作用主要是刷新数据库中的表格，使其保持最新，即让数据库之前存储的记录的表格字段和程序中最新使用的表格字段保持一致（只增不减）
 }
 
-func (engine *Engine) AddEngine(symbol string, openPrice float32) {
-	NewEngine := Engine{
-		Symbol:     symbol,
-		Price:      openPrice,
-		BuyOrders:  make([]OrderNode, 0, 100),
-		SellOrders: make([]OrderNode, 0, 100),
-	}
+func GetEngine(symbol string) (OrderNode, *gorm.DB) {
+	var order OrderNode
+	db := DB.Where("symbol=?", symbol).First(&order)
+	return order, db
+}
 
-	EngineList[symbol] = NewEngine
-
-	result := DB.Create(&NewEngine)
-	if result.Error != nil {
-		fmt.Printf("Addengine failed,err:%v", result.Error)
+func (engine *Engine) AddEngine() {
+	// var NewEngine Engine
+	_, ok := EngineList[engine.Symbol]
+	//內存不在
+	if !ok {
+		err := DB.Create(&engine).Error
+		if err != nil {
+			fmt.Printf("Add engine failed,err:%v", err)
+		}
+		// EngineList[engine.Symbol] = *engine
+		// // db := DB.Where("symbol=?", engine.Symbol).First(&NewEngine)
+		// //mysql不存在
+		// if db.Error != nil {
+		// 	err := DB.Create(&engine).Error
+		// 	if err != nil {
+		// 		fmt.Printf("Add engine failed,err:%v", err)
+		// 	}
+		// 	EngineList[engine.Symbol] = *engine
+		// }
 	}
+	EngineList[engine.Symbol] = *engine
 }
 
 func DeleteEngine(symbol string) {
@@ -154,16 +163,16 @@ func (engine *Engine) BuyOrSell(order OrderNode) []TransactionLog {
 	if order.Side == 0 {
 		// redis
 		trade := engine.LimitBuy(order)
-		a, _ := json.Marshal(engine)
-		_, error := cache.Set(ctx, engine.Symbol, string(a), DEFAULT_EXPIRATION*time.Second).Result()
-		fmt.Println(error)
+		// a, _ := json.Marshal(engine)
+		// _, error := cache.Set(ctx, engine.Symbol, string(a), DEFAULT_EXPIRATION*time.Second).Result()
+		// fmt.Println(error)
 		return trade
 	}
 	// redis
 	trade := engine.LimitSell(order)
-	a, _ := json.Marshal(engine)
-	_, error := cache.Set(ctx, engine.Symbol, string(a), DEFAULT_EXPIRATION*time.Second).Result()
-	fmt.Println(error)
+	// a, _ := json.Marshal(engine)
+	// _, error := cache.Set(ctx, engine.Symbol, string(a), DEFAULT_EXPIRATION*time.Second).Result()
+	// fmt.Println(error)
 	return trade
 }
 

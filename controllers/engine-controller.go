@@ -13,12 +13,14 @@ var (
 func AddEngine(symbol string, openPrice float32) (int32, string) {
 	EngineList = models.GetEngineList()
 	var Engine models.Engine
+	Engine.Symbol = symbol
+	Engine.Price = openPrice
 	_, ok := EngineList[symbol]
 	if ok {
 		log.Println("Engine is already exist.")
 		return 404, "Engine is already exist."
 	}
-	Engine.AddEngine(symbol, openPrice)
+	Engine.AddEngine()
 	return 300, "succesful create"
 }
 

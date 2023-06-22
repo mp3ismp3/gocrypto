@@ -3,31 +3,31 @@ package models
 var EngineList map[string]Engine
 
 func InitEngineList() {
-	engineList := map[string]Engine{
-		"ETH": {
-			"ds",
-			"ETHUSDT",
-			1800,
-			make([]OrderNode, 0, 100),
-			make([]OrderNode, 0, 100),
-		},
-		"BTC": {
-			"ddw",
-			"BTCUSDT",
-			26000,
-			make([]OrderNode, 0, 100),
-			make([]OrderNode, 0, 100),
-		},
+
+	EngineList = make(map[string]Engine)
+
+	ETH := Engine{
+		Symbol: "ETHUSDT",
+		Price:  1800,
+		// BuyOrders:  make([]OrderNode, 100),
+		// SellOrders: make([]OrderNode, 100),
 	}
-	//redis
-	for k, v := range engineList {
-		err := cache.HSet(ctx, "EngineList", k, v).Err()
-		if err != nil {
-			panic(err)
-		}
+	BTC := Engine{
+		Symbol: "BTCUSDT",
+		Price:  26000,
+		// BuyOrders:  make([]OrderNode, 100),
+		// SellOrders: make([]OrderNode, 100),
 	}
 
-	EngineList = engineList
+	ETH.AddEngine()
+	BTC.AddEngine()
+	//redis
+	// for k, v := range engineList {
+	// 	err := cache.HSet(ctx, "EngineList", k, v).Err()
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// }
 }
 
 func GetEngineList() map[string]Engine {

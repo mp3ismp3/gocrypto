@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"strconv"
 
 	"github.com/mp3ismp3/gocrypto/controllers"
 	pb "github.com/mp3ismp3/gocrypto/proto"
@@ -14,6 +13,10 @@ import (
 
 type server struct {
 	*pb.UnimplementedExchangeServer
+}
+
+func NewGrpcServer() pb.ExchangeServer {
+	return &server{}
 }
 
 func (s *server) OpenMatching(ctx context.Context, req *pb.OpenMatchingRequest) (*pb.Response, error) {
@@ -39,20 +42,18 @@ func (s *server) CreateOrder(ctx context.Context, req *pb.CreateOrderRequest) (*
 	qty := req.GetQty()
 	symbol := req.GetSymbol()
 	price := req.GetPrice()
-	orderNode := controllers.AddOrder(symbol, int32(*side.Enum()), price, qty, int32(*ordertype.Enum()))
-	fmt.Println("新訂單:", orderNode)
-	// // orderList, ok := EngineList[orderNode.Symbol]
-	// // if !ok {
-	// // 	log.Println("沒有這個幣種")
-	// // }
-	// trade := orderList.BuyOrSell(*orderNode)
-	// fmt.Println("交易結果:", trade)
-	response := &pb.OrderLogResponse{OrderId: string(strconv.Itoa(int(orderNode.ID)))}
+	orderId := controllers.AddOrder(symbol, int32(*side.Enum()), price, qty, int32(*ordertype.Enum()))
+	fmt.Println("新訂單編號:", orderId)
+	response := &pb.OrderLogResponse{OrderId: uint64(orderId)}
 	return response, nil
 }
 
-func (s *server) CancelOrder(ctx context.Context, request *pb.CancelOrderRequest) (*pb.OrderLogResponse, error) {
-	return nil, nil
+func (s *server) CancelOrder(ctx context.Context, req *pb.CancelOrderRequest) (*pb.OrderLogResponse, error) {
+	id := req.GetOrderId()
+	symbol := req.GetSymbol()
+	orderId := controllers.DeleteOrder(symbol, id)
+	response := &pb.OrderLogResponse{OrderId: uint64(orderId)}
+	return response, nil
 }
 
 func Init() {
@@ -63,8 +64,9 @@ func Init() {
 		log.Fatalf("failed to listen on port 50051: %v \n", err)
 	}
 
-	pb.RegisterExchangeServer(s, &server{}) // 再調用服務前，呼叫 RegisterService 註冊服務使其實現到gRPC服務器
-	if err := s.Serve(lis); err != nil {    //Serve為每一個連接創建 new ServerTransport 和 service goroutine
+	pb.RegisterExchangeServer(s, NewGrpcServer()) // 再調用服務前，呼叫 RegisterService 註冊服務使其實現到gRPC服務器
+	if err := s.Serve(lis); err != nil {          //Serve為每一個連接創建 new ServerTransport 和 service goroutine
 		log.Fatalf("faild to serve: %v \n", err)
 	}
+	fmt.Println("Serving...")
 }

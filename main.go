@@ -4,7 +4,9 @@ import (
 	"fmt"
 
 	conf "github.com/mp3ismp3/gocrypto/config"
-	mysql "github.com/mp3ismp3/gocrypto/db/mysql"
+	"github.com/mp3ismp3/gocrypto/db/mysql"
+	"github.com/mp3ismp3/gocrypto/models"
+	"github.com/mp3ismp3/gocrypto/servers/grpcserver"
 )
 
 func main() {
@@ -12,8 +14,9 @@ func main() {
 	conf.InitConfig()
 	mysql.InitDB()
 	fmt.Println("InitDB")
-	// models.InitEngineList()
-	// fmt.Println("InitInitEngineList")
-	// server.Init()
-	// fmt.Println("Initserver")
+	models.ModelInit()
+	models.InitEngineList()
+	fmt.Println("InitInitEngineList")
+	grpcserver.Init()
+	fmt.Println("Initserver")
 }

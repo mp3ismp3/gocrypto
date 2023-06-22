@@ -36,7 +36,7 @@ message CreateOrderRequest {
 }
 
 message ModifyOrderRequest {
-    string orderId = 1;
+    uint64 orderId = 1;
     float qty = 2;
     float price = 3;
 }
@@ -44,12 +44,12 @@ message ModifyOrderRequest {
 
 message CancelOrderRequest {
     string symbol = 1;
-    string orderId = 2;
+    uint64 orderId = 2;
 }
 
 
 message OrderLogResponse {
-    string orderId=1;
+    uint64 orderId=1;
 
 }
 

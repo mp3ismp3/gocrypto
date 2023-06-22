@@ -9,13 +9,13 @@ import (
 
 type OrderNode struct {
 	gorm.Model
-	Symbol     string
-	Price      float32
-	Side       int32
-	Quantity   float32
-	Value      float32
-	OrderType  int32
-	OrderRefer uint
+	Symbol    string
+	Price     float32
+	Side      int32
+	Quantity  float32
+	Value     float32
+	OrderType int32
+	EngineID  uint
 }
 
 func SetOrder(symbol string, side int32, price float32, qty float32, ordertype int32) *OrderNode {
@@ -32,14 +32,28 @@ func SetOrder(symbol string, side int32, price float32, qty float32, ordertype i
 
 }
 
-func AddBuyOrder(order OrderNode) {
-	result := DB.Create(&order)
-	if result.Error != nil {
-		fmt.Printf("AddBuyOrder Faild, error: %s", result.Error)
-	}
+func GetOrder(id uint64) (OrderNode, *gorm.DB) {
+	var order OrderNode
+	db := DB.Where("ID=?", id).Find(&order)
+	return order, db
 }
 
+func (node *OrderNode) AddOrder() OrderNode {
+	result := DB.Create(&node)
+	if result.Error != nil {
+		fmt.Printf("AddOrder Faild, error: %s", result.Error)
+	}
+	return *node
+}
 
+func DeleteOrder(id uint64) OrderNode {
+	var order OrderNode
+	result := DB.Where("ID = ?", id).Delete(&order)
+	if result.Error != nil {
+		fmt.Printf("DeleteOrder Faild, error: %s", result.Error)
+	}
+	return order
+}
 
 func (node *OrderNode) SetCreateTime() {
 	node.CreatedAt = time.Now()
