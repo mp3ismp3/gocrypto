@@ -1,9 +1,13 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 
+	"context"
+
 	"github.com/mp3ismp3/gocrypto/db/mysql"
+	"github.com/mp3ismp3/gocrypto/db/redis"
 	"gorm.io/gorm"
 )
 
@@ -16,8 +20,9 @@ type Engine struct {
 }
 
 var (
-	DB *gorm.DB
-	// ctx = context.Background()
+	DB    *gorm.DB
+	cache = redis.GetCache()
+	ctx   = context.Background()
 	// cache = redis.NewRedisClient()
 )
 
@@ -29,42 +34,65 @@ func ModelInit() {
 	} //其作用主要是刷新数据库中的表格，使其保持最新，即让数据库之前存储的记录的表格字段和程序中最新使用的表格字段保持一致（只增不减）
 }
 
-func GetEngine(symbol string) (OrderNode, *gorm.DB) {
-	var order OrderNode
-	db := DB.Where("symbol=?", symbol).First(&order)
-	return order, db
-}
-
-func (engine *Engine) AddEngine() {
-	// var NewEngine Engine
-	_, ok := EngineList[engine.Symbol]
-	//內存不在
-	if !ok {
-		err := DB.Create(&engine).Error
+func GetEngine(symbol string) (*Engine, error) {
+	engine := Engine{}
+	//從redis緩存中查詢數據
+	result, err := cache.Get(ctx, symbol).Result()
+	if err == nil {
+		err = json.Unmarshal([]byte(result), &engine)
 		if err != nil {
-			fmt.Printf("Add engine failed,err:%v", err)
+			return nil, err
 		}
-		// EngineList[engine.Symbol] = *engine
-		// // db := DB.Where("symbol=?", engine.Symbol).First(&NewEngine)
-		// //mysql不存在
-		// if db.Error != nil {
-		// 	err := DB.Create(&engine).Error
-		// 	if err != nil {
-		// 		fmt.Printf("Add engine failed,err:%v", err)
-		// 	}
-		// 	EngineList[engine.Symbol] = *engine
-		// }
+		return &engine, nil
 	}
-	EngineList[engine.Symbol] = *engine
+	//從mysql中獲取數據
+	if err := DB.Where("symbol = ?", symbol).First(&engine).Error; err != nil {
+		return nil, err
+	}
+	jsonData, err := json.Marshal(engine)
+	if err != nil {
+		return nil, err
+	}
+	//將數據存儲到Redis緩存中
+	if err := cache.Set(ctx, symbol, jsonData, 0).Err(); err != nil {
+		return nil, err
+	}
+	return &engine, nil
 }
 
-func DeleteEngine(symbol string) {
-	Engine := EngineList[symbol]
-	delete(EngineList, symbol)
-	result := DB.Where("symbol = ?", symbol).Delete(&Engine)
-	if result.Error != nil {
-		fmt.Printf("Addengine failed,err:%v", result.Error)
+func (engine *Engine) AddEngine() error {
+	//新增mysql數據
+	err := DB.Create(&engine).Error
+	if err != nil {
+		return err
 	}
+	//新增Redis緩存數據
+	jsonData, err := json.Marshal(engine)
+	if err != nil {
+		return err
+	}
+	if err := cache.Set(ctx, engine.Symbol, jsonData, 0).Err(); err != nil {
+		return err
+	}
+	// EngineList[engine.Symbol] = *engine
+	return nil
+}
+
+func DeleteEngine(symbol string) error {
+	//從mysql中刪除symbol，delete(EngineList, symbol)
+	engine := Engine{}
+	if err := DB.Where("symbol = ?", symbol).Delete(&engine).Error; err != nil {
+		fmt.Println("刪除Mysql數據時出錯:", err)
+		return err
+	}
+	//刪除該緩存數據
+	result, err := cache.Del(ctx, symbol).Result()
+	if err != nil {
+		fmt.Println("刪除Redis數據時出錯:", err)
+		return err
+	}
+	fmt.Println("已成功刪除", result, "數據")
+	return nil
 }
 
 // func GetAll(db *gorm.DB) ([]engine, error) {
