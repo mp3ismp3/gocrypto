@@ -21,7 +21,7 @@ type Engine struct {
 
 var (
 	DB    *gorm.DB
-	cache = redis.GetCache()
+	cache = redis.InitRedis()
 	ctx   = context.Background()
 	// cache = redis.NewRedisClient()
 )
@@ -71,6 +71,7 @@ func (engine *Engine) AddEngine() error {
 	if err != nil {
 		return err
 	}
+	fmt.Println("cache:", cache)
 	if err := cache.Set(ctx, engine.Symbol, jsonData, 0).Err(); err != nil {
 		return err
 	}
@@ -79,19 +80,22 @@ func (engine *Engine) AddEngine() error {
 }
 
 func DeleteEngine(symbol string) error {
+
+	//新的会话，不会继承之前的查詢條件。
+	session := DB.Session(&gorm.Session{})
 	//從mysql中刪除symbol，delete(EngineList, symbol)
-	engine := Engine{}
-	if err := DB.Where("symbol = ?", symbol).Delete(&engine).Error; err != nil {
+	if err := session.Where("symbol = ?", symbol).Delete(&Engine{}).Error; err != nil {
 		fmt.Println("刪除Mysql數據時出錯:", err)
 		return err
 	}
+
 	//刪除該緩存數據
 	result, err := cache.Del(ctx, symbol).Result()
 	if err != nil {
 		fmt.Println("刪除Redis數據時出錯:", err)
 		return err
 	}
-	fmt.Println("已成功刪除", result, "數據")
+	fmt.Println("已成功刪除", result, "緩存數據")
 	return nil
 }
 

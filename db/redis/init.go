@@ -1,21 +1,24 @@
 package redis
 
 import (
+	"context"
+
 	"github.com/go-redis/redis/v8"
-	conf "github.com/mp3ismp3/gocrypto/config"
 )
 
-var cache *redis.Client
-
-func NewRedisClient() {
-	rConfig := conf.Config.Redis
-	cache = redis.NewClient(&redis.Options{
-		Addr:     rConfig.RedisHost,
+func InitRedis() *redis.Client {
+	// rConfig := conf.Config.Redis
+	// pathRead := strings.Join([]string{rConfig.RedisHost, ":", rConfig.RedisPort}, "")
+	cache := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
 		Password: "", // no password set
 		DB:       0,  //use default DB
 	})
-}
 
-func GetCache() *redis.Client {
+	_, err := cache.Ping(context.Background()).Result()
+	if err != nil {
+		panic(err)
+	}
+
 	return cache
 }
