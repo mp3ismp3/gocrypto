@@ -38,12 +38,12 @@ func GetOrder(id uint64) (OrderNode, *gorm.DB) {
 	return order, db
 }
 
-func (node *OrderNode) AddOrder() OrderNode {
-	result := DB.Create(&node)
-	if result.Error != nil {
-		fmt.Printf("AddOrder Faild, error: %s", result.Error)
+func (node *OrderNode) AddOrder() *OrderNode {
+	err := DB.Create(&node).Error
+	if err != nil {
+		panic(err)
 	}
-	return *node
+	return node
 }
 
 func DeleteOrder(id uint64) OrderNode {

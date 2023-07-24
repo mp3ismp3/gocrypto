@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"context"
@@ -35,29 +36,54 @@ func ModelInit() {
 }
 
 func GetEngine(symbol string) (*Engine, error) {
-	engine := Engine{}
-	//從redis緩存中查詢數據
+	// 從緩存讀取數據
 	result, err := cache.Get(ctx, symbol).Result()
 	if err == nil {
-		err = json.Unmarshal([]byte(result), &engine)
+		engine := new(Engine)
+		err = json.Unmarshal([]byte(result), engine)
 		if err != nil {
 			return nil, err
 		}
-		return &engine, nil
+		return engine, nil
 	}
-	//從mysql中獲取數據
-	if err := DB.Where("symbol = ?", symbol).First(&engine).Error; err != nil {
+	fmt.Println("緩存數據不存在")
+	// 從資料庫讀取數據
+	engines, err := GetAll(DB)
+	if err != nil {
 		return nil, err
 	}
+	engine, err := GetEngineBySymbol(symbol, engines)
+	if err != nil {
+		return nil, err
+	}
+
+	//新增Redis緩存數據
 	jsonData, err := json.Marshal(engine)
 	if err != nil {
 		return nil, err
 	}
-	//將數據存儲到Redis緩存中
-	if err := cache.Set(ctx, symbol, jsonData, 0).Err(); err != nil {
+	fmt.Println("cache:", cache)
+	if err := cache.Set(ctx, engine.Symbol, jsonData, 0).Err(); err != nil {
 		return nil, err
 	}
-	return &engine, nil
+	return engine, nil
+
+}
+
+// 检索Engine列表並预加载訂單
+func GetAll(db *gorm.DB) ([]Engine, error) {
+	var engines []Engine
+	err := db.Model(&Engine{}).Preload("OrderNode").Find(&engines).Error
+	return engines, err
+}
+
+func GetEngineBySymbol(symbol string, engines []Engine) (*Engine, error) {
+	for _, engine := range engines {
+		if engine.Symbol == symbol {
+			return &engine, nil
+		}
+	}
+	return nil, errors.New("engine is not exist")
 }
 
 func (engine *Engine) AddEngine() error {

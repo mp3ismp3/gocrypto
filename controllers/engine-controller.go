@@ -27,8 +27,10 @@ func DeleteEngine(symbol string) (int32, string) {
 	return 300, "succesful delete"
 }
 
-func GetEngine(symbol string) models.Engine {
-	EngineList = models.GetEngineList()
-	engine := EngineList[symbol]
+func GetEngine(symbol string) *models.Engine {
+	engine, err := models.GetEngine(symbol)
+	if err != nil {
+		return nil
+	}
 	return engine
 }
